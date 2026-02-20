@@ -143,11 +143,11 @@ export default function Records() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
 
-        // Keep your current payload keys (fileurl/recordid/patientid)
+        // Corrected payload keys (file_url/record_id/patient_id)
         body: JSON.stringify({
-          fileurl: record.file_url,
-          recordid: record.id,
-          patientid: patientRowId, // patients.id
+          file_url: record.file_url,
+          record_id: record.id,
+          patient_id: patientRowId, // patients.id
         }),
       });
 
@@ -156,10 +156,10 @@ export default function Records() {
       if (result.success) {
         alert(`✅ Analysis Complete! Added ${result.chunks} segments to AI memory.`);
       } else {
-        alert("❌ AI Processing Failed: " + (result.error || "Unknown error"));
+        alert("❌ AI Processing Failed: " + (result.error || result.detail || "Unknown error"));
       }
     } catch (err) {
-      alert("❌ Could not connect to AI server. Ensure app.py is running.");
+      alert("❌ Could not connect to AI server. Ensure the backend is running.");
     } finally {
       setProcessingId(null);
     }
@@ -369,11 +369,10 @@ export default function Records() {
                           variant="outline"
                           onClick={() => handleAnalyze(record)}
                           disabled={processingId === record.id}
-                          className={`border-purple-200 text-purple-700 ${
-                            processingId === record.id
-                              ? "bg-primary/10"
-                              : "hover:bg-purple-50 hover:text-purple-600"
-                          }`}
+                          className={`border-purple-200 text-purple-700 ${processingId === record.id
+                            ? "bg-primary/10"
+                            : "hover:bg-purple-50 hover:text-purple-600"
+                            }`}
                           title="Analyze with AI"
                         >
                           {processingId === record.id ? (

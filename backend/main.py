@@ -635,7 +635,6 @@ Language Guidelines:
         print(f"❌ Chat Error: {e}")
         import traceback
         traceback.print_exc()
-        # Return user-friendly error
         return ChatResponse(
             success=False,
             response="I'm experiencing technical difficulties. Please try again.",
@@ -693,8 +692,13 @@ async def process_document(request: DocumentProcessRequest):
         }
         
     except Exception as e:
-        print(f"❌ Document Processing Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        print("❌ CRITICAL: Document Processing Error Traceback:")
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 @app.post("/analyze_health")
 async def analyze_health(request: HealthAnalysisRequest):

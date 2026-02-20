@@ -82,24 +82,53 @@ class RAGService:
             Dictionary with processing results
         """
         try:
-            print(f"📥 Downloading PDF from: {file_url}")
+            print(f"📥 Downloading file from: {file_url}")
             
-            # Download PDF
+            # Download file
             response = requests.get(file_url)
             response.raise_for_status()
-            
-            # Extract text
-            pdf_file = io.BytesIO(response.content)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            content_type = response.headers.get('Content-Type', '').lower()
             
             full_text = ""
-            for page in pdf_reader.pages:
-                text = page.extract_text()
-                if text:
-                    full_text += text + "\n"
+            
+            if 'application/pdf' in content_type:
+                print("📄 Processing as PDF...")
+                pdf_file = io.BytesIO(response.content)
+                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                
+                for page in pdf_reader.pages:
+                    text = page.extract_text()
+                    if text:
+                        full_text += text + "\n"
+            elif 'image/' in content_type or file_url.lower().endswith(('.png', '.jpg', '.jpeg')):
+                print("🖼️ Processing as Image...")
+                # Use Gemini to extract text from image
+                vision_model = genai.GenerativeModel('gemini-2.5-flash')
+                print(f"🧬 Using vision model to extract text from {content_type}")
+                try:
+                    vision_response = vision_model.generate_content([
+                        "Extract all text from this medical record image. Give me the raw text as is.",
+                        {'mime_type': 'image/jpeg' if 'jpeg' in content_type or 'jpg' in content_type else 'image/png', 'data': response.content}
+                    ])
+                    full_text = vision_response.text
+                    print(f"✅ Extracted {len(full_text)} characters from image")
+                except Exception as ve:
+                    print(f"❌ Gemini Vision Error: {ve}")
+                    raise ValueError(f"AI OCR failed: {ve}")
+            else:
+                # Fallback: try PDF if unknown
+                try:
+                    pdf_file = io.BytesIO(response.content)
+                    pdf_reader = PyPDF2.PdfReader(pdf_file)
+                    for page in pdf_reader.pages:
+                        text = page.extract_text()
+                        if text:
+                            full_text += text + "\n"
+                except:
+                    raise ValueError(f"Unsupported file type: {content_type}")
             
             if not full_text.strip():
-                raise ValueError("PDF is empty or image-based")
+                raise ValueError("Could not extract any text from the file")
             
             # Save full text to records table
             try:

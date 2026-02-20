@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -19,8 +19,11 @@ import {
     TrendingUp,
     Scale,
     Calendar,
-    Droplet
+    Droplet,
+    FileText
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface AnalysisResult {
     risk_level: 'Healthy' | 'Warning' | 'Critical';
@@ -69,6 +72,53 @@ export function Analysis() {
     const [data, setData] = useState<FullAnalysisResponse | null>(null);
     const [trends, setTrends] = useState<TrendPoint[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const resultsRef = useRef<HTMLDivElement>(null);
+
+    const handleDownload = async () => {
+        if (!resultsRef.current) return;
+
+        try {
+            // Set scale to 2 for better resolution
+            const canvas = await html2canvas(resultsRef.current, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#f8fafc',
+                logging: false,
+                windowWidth: resultsRef.current.scrollWidth,
+            });
+
+            const imgData = canvas.toDataURL("image/png");
+
+            // A4 dimensions in px (at 72 DPI it's 595x842, but we'll use proportions)
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            // Calculate height of the image in PDF mm
+            const imgWidth = pageWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            // First page
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            // Extra pages if needed
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save(`health-report-${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (err) {
+            console.error("PDF Download failed:", err);
+            alert("Failed to generate PDF. Please try again.");
+        }
+    };
 
     useEffect(() => {
         const getPatientId = async () => {
@@ -199,7 +249,24 @@ export function Analysis() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-6"
+                        ref={resultsRef}
                     >
+                        {/* Header with Download Button (Hidden in Capture) */}
+                        <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-border/50 mb-2 no-print" data-html2canvas-ignore="true">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="text-emerald-500 w-5 h-5" />
+                                <span className="font-semibold">Analysis Ready</span>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleDownload}
+                                className="flex items-center gap-2 hover:bg-primary hover:text-white transition-colors"
+                            >
+                                <FileText className="w-4 h-4" />
+                                Download PDF Report
+                            </Button>
+                        </div>
                         {/* Top Row: Risk & Vitals */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Risk Card */}
