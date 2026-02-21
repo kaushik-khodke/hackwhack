@@ -102,10 +102,12 @@ class RAGService:
                         full_text += text + "\n"
             elif 'image/' in content_type or file_url.lower().endswith(('.png', '.jpg', '.jpeg')):
                 print("🖼️ Processing as Image...")
-                # Use Gemini to extract text from image
+                # Use Gemini-1.5-flash for OCR
                 vision_model = genai.GenerativeModel('gemini-2.5-flash')
                 print(f"🧬 Using vision model to extract text from {content_type}")
+                
                 try:
+                    print("🤖 Image OCR (Using gemini-2.5-flash)")
                     vision_response = vision_model.generate_content([
                         "Extract all text from this medical record image. Give me the raw text as is.",
                         {'mime_type': 'image/jpeg' if 'jpeg' in content_type or 'jpg' in content_type else 'image/png', 'data': response.content}
@@ -113,7 +115,7 @@ class RAGService:
                     full_text = vision_response.text
                     print(f"✅ Extracted {len(full_text)} characters from image")
                 except Exception as ve:
-                    print(f"❌ Gemini Vision Error: {ve}")
+                    print(f"❌ AI OCR failed: {ve}")
                     raise ValueError(f"AI OCR failed: {ve}")
             else:
                 # Fallback: try PDF if unknown

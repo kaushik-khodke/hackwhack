@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { LanguageSwitcher } from "@/components/features/LanguageSwitcher";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
@@ -397,6 +398,7 @@ export function Navbar() {
             {/* Right */}
             <div className="flex items-center gap-2">
               <LanguageSwitcher />
+              <ThemeToggle />
 
               {/* Command button desktop */}
               <button
@@ -440,13 +442,16 @@ export function Navbar() {
                     <SheetHeader>
                       <SheetTitle className="flex items-center justify-between font-heading">
                         Navigation
-                        <button
-                          onClick={() => setCmdOpen(true)}
-                          className="h-9 w-9 rounded-xl border bg-background hover:bg-muted/40 transition-colors flex items-center justify-center"
-                          aria-label="Search"
-                        >
-                          <Search className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <ThemeToggle />
+                          <button
+                            onClick={() => setCmdOpen(true)}
+                            className="h-9 w-9 rounded-xl border bg-background hover:bg-muted/40 transition-colors flex items-center justify-center"
+                            aria-label="Search"
+                          >
+                            <Search className="h-4 w-4" />
+                          </button>
+                        </div>
                       </SheetTitle>
                     </SheetHeader>
 

@@ -29,6 +29,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")   # ⚠️ Use SERVICE_ROL
 
 # 2. INITIALIZE CLIENTS
 genai.configure(api_key=MY_SECRET_KEY)
+# Initialize Gemini Model
 model = genai.GenerativeModel('gemini-2.5-flash')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -96,9 +97,11 @@ def chat():
     """
 
     try:
+        print("🤖 Chat Assistant (Using gemini-2.5-flash)")
         response = model.generate_content(system_prompt + "\n\nUser Query: " + user_message)
         return jsonify({ "success": True, "response": response.text })
     except Exception as e:
+        print(f"❌ Gemini Error: {e}")
         return jsonify({ "success": False, "error": str(e) }), 500
 
 # ==========================================

@@ -1,22 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { API_BASE_URL } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
     Activity,
     Heart,
     Thermometer,
-    ArrowRight,
     Sparkles,
     CheckCircle,
     AlertTriangle,
     Lightbulb,
-    Loader2,
     TrendingUp,
     Scale,
     Calendar,
@@ -25,6 +23,16 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer
+} from 'recharts';
 
 interface AnalysisResult {
     risk_level: 'Healthy' | 'Warning' | 'Critical';
@@ -46,19 +54,9 @@ interface FullAnalysisResponse {
     follow_up_prompt: string;
 }
 
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer
-} from 'recharts';
-
 interface TrendPoint {
     date: string;
+    displayDate: string;
     systolic: number | null;
     diastolic: number | null;
     sugar: number | null;
@@ -79,7 +77,6 @@ export function Analysis() {
         if (!resultsRef.current) return;
 
         try {
-            // Set scale to 2 for better resolution
             const canvas = await html2canvas(resultsRef.current, {
                 scale: 2,
                 useCORS: true,
@@ -89,24 +86,18 @@ export function Analysis() {
             });
 
             const imgData = canvas.toDataURL("image/png");
-
-            // A4 dimensions in px (at 72 DPI it's 595x842, but we'll use proportions)
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-
-            // Calculate height of the image in PDF mm
             const imgWidth = pageWidth;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             let heightLeft = imgHeight;
             let position = 0;
 
-            // First page
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
             heightLeft -= pageHeight;
 
-            // Extra pages if needed
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
@@ -146,7 +137,6 @@ export function Analysis() {
         setTrends([]);
 
         try {
-            // Run analysis and trends fetch in parallel
             const [analysisRes, trendsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/analyze_health`, {
                     method: 'POST',
@@ -170,7 +160,6 @@ export function Analysis() {
             }
 
             if (trendsJson.success) {
-                // Format dates for display
                 const formattedTrends = trendsJson.timeline.map((t: any) => ({
                     ...t,
                     displayDate: new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -187,16 +176,15 @@ export function Analysis() {
 
     const getRiskColor = (risk: string) => {
         switch (risk) {
-            case 'Healthy': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-            case 'Warning': return 'text-amber-600 bg-amber-50 border-amber-200';
-            case 'Critical': return 'text-red-600 bg-red-50 border-red-200';
-            default: return 'text-slate-600 bg-slate-50 border-slate-200';
+            case 'Healthy': return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800';
+            case 'Warning': return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
+            case 'Critical': return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800';
+            default: return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800';
         }
     };
 
     return (
         <div className="min-h-screen bg-background relative overflow-hidden font-sans">
-            {/* Background Decor */}
             <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-primary/5 rounded-full blur-3xl -z-10" />
             <div className="absolute bottom-0 left-0 w-1/4 h-1/4 bg-teal-400/10 rounded-full blur-3xl -z-10" />
 
@@ -224,7 +212,7 @@ export function Analysis() {
                             <Button
                                 size="lg"
                                 onClick={runAnalysis}
-                                className="gradient-primary text-lg px-8 h-12 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
+                                className="gradient-primary text-lg px-8 h-12 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all font-bold text-white"
                             >
                                 Start Comprehensive Analysis
                             </Button>
@@ -252,8 +240,7 @@ export function Analysis() {
                         className="space-y-6"
                         ref={resultsRef}
                     >
-                        {/* Header with Download Button (Hidden in Capture) */}
-                        <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-border/50 mb-2 no-print" data-html2canvas-ignore="true">
+                        <div className="flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-4 rounded-xl border border-border/50 mb-2 no-print" data-html2canvas-ignore="true">
                             <div className="flex items-center gap-2">
                                 <CheckCircle className="text-emerald-500 w-5 h-5" />
                                 <span className="font-semibold">Analysis Ready</span>
@@ -268,9 +255,8 @@ export function Analysis() {
                                 Download PDF Report
                             </Button>
                         </div>
-                        {/* Top Row: Risk & Vitals */}
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Risk Card */}
                             <Card className={`border-2 ${getRiskColor(data.prediction.risk_level)}`}>
                                 <CardContent className="p-6 flex items-center justify-between">
                                     <div>
@@ -281,7 +267,6 @@ export function Analysis() {
                                 </CardContent>
                             </Card>
 
-                            {/* Vitals Summary */}
                             <Card className="glass-card">
                                 <CardContent className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-y-6 gap-x-2 text-center items-center justify-center">
                                     <div className="flex flex-col items-center">
@@ -318,7 +303,6 @@ export function Analysis() {
                             </Card>
                         </div>
 
-                        {/* Trends Graph */}
                         {trends.length > 0 && (
                             <Card className="glass-card">
                                 <CardContent className="p-6">
@@ -328,13 +312,13 @@ export function Analysis() {
                                             Health Trends Analysis
                                         </h3>
                                         <div className="flex gap-4 text-xs font-semibold">
-                                            <div className="flex items-center gap-1.5 glass bg-white/50 px-3 py-1 rounded-full border border-red-200 text-red-700">
+                                            <div className="flex items-center gap-1.5 glass bg-white/50 dark:bg-slate-800/50 px-3 py-1 rounded-full border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400">
                                                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> BP
                                             </div>
-                                            <div className="flex items-center gap-1.5 glass bg-white/50 px-3 py-1 rounded-full border border-blue-200 text-blue-700">
+                                            <div className="flex items-center gap-1.5 glass bg-white/50 dark:bg-slate-800/50 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400">
                                                 <div className="w-2 h-2 rounded-full bg-blue-500" /> Sugar
                                             </div>
-                                            <div className="flex items-center gap-1.5 glass bg-white/50 px-3 py-1 rounded-full border border-emerald-200 text-emerald-700">
+                                            <div className="flex items-center gap-1.5 glass bg-white/50 dark:bg-slate-800/50 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400">
                                                 <div className="w-2 h-2 rounded-full bg-emerald-500" /> Heart Rate
                                             </div>
                                         </div>
@@ -357,17 +341,19 @@ export function Analysis() {
                                                         <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                                     </linearGradient>
                                                 </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                                                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" vertical={false} />
                                                 <XAxis
                                                     dataKey="displayDate"
-                                                    stroke="#64748b"
+                                                    stroke="currentColor"
+                                                    className="text-muted-foreground"
                                                     fontSize={12}
                                                     tickLine={false}
                                                     axisLine={false}
                                                     dy={10}
                                                 />
                                                 <YAxis
-                                                    stroke="#64748b"
+                                                    stroke="currentColor"
+                                                    className="text-muted-foreground"
                                                     fontSize={12}
                                                     tickLine={false}
                                                     axisLine={false}
@@ -377,7 +363,7 @@ export function Analysis() {
                                                     content={({ active, payload, label }) => {
                                                         if (active && payload && payload.length) {
                                                             return (
-                                                                <div className="bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-xl border border-border/50 text-sm">
+                                                                <div className="bg-background/95 backdrop-blur-sm p-4 rounded-xl shadow-xl border border-border/50 text-sm">
                                                                     <p className="font-bold mb-2 text-primary border-b border-border pb-1">{label}</p>
                                                                     {payload.map((entry: any) => (
                                                                         <div key={entry.name} className="flex items-center justify-between gap-6 py-1">
@@ -400,45 +386,19 @@ export function Analysis() {
                                                     }}
                                                 />
                                                 <Legend wrapperStyle={{ paddingTop: "20px" }} />
-
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="systolic"
-                                                    name="Suffering BP (Sys)"
-                                                    stroke="#ef4444"
-                                                    fillOpacity={1}
-                                                    fill="url(#colorBP)"
-                                                    strokeWidth={3}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="sugar"
-                                                    name="Sugar Lvl"
-                                                    stroke="#3b82f6"
-                                                    fillOpacity={1}
-                                                    fill="url(#colorSugar)"
-                                                    strokeWidth={3}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="heart_rate"
-                                                    name="Heart Rate"
-                                                    stroke="#10b981"
-                                                    fillOpacity={1}
-                                                    fill="url(#colorHR)"
-                                                    strokeWidth={3}
-                                                />
+                                                <Area type="monotone" dataKey="systolic" name="BP Sys" stroke="#ef4444" fillOpacity={1} fill="url(#colorBP)" strokeWidth={3} />
+                                                <Area type="monotone" dataKey="sugar" name="Sugar" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSugar)" strokeWidth={3} />
+                                                <Area type="monotone" dataKey="heart_rate" name="Heart Rate" stroke="#10b981" fillOpacity={1} fill="url(#colorHR)" strokeWidth={3} />
                                             </AreaChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <p className="text-sm text-muted-foreground text-center mt-4 bg-slate-100/50 py-2 rounded-lg mx-auto max-w-md border border-slate-200/50">
+                                    <p className="text-sm text-muted-foreground text-center mt-4 bg-muted/30 py-2 rounded-lg mx-auto max-w-md border border-border/50">
                                         💡 Tip: Consistent monitoring helps detects subtle health changes early.
                                     </p>
                                 </CardContent>
                             </Card>
                         )}
 
-                        {/* AI Insight Report */}
                         <Card className="glass-card overflow-hidden">
                             <div className="bg-gradient-to-r from-primary/10 to-transparent p-4 border-b border-primary/10 flex items-center gap-3">
                                 <Sparkles className="w-5 h-5 text-primary" />
@@ -448,28 +408,16 @@ export function Analysis() {
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                        // Headers
-                                        h3: ({ node, ...props }) => (
-                                            <h3 className="text-lg font-bold text-primary mt-6 mb-3 flex items-center gap-2 border-b border-primary/10 pb-2" {...props} />
-                                        ),
-                                        // Unordered Lists - Remove default styling
-                                        ul: ({ node, ...props }) => (
-                                            <ul className="space-y-3 list-none pl-0 my-2" {...props} />
-                                        ),
-                                        // List Items - The "WhatsApp Block" look
-                                        li: ({ node, ...props }) => (
+                                        h3: ({ ...props }) => <h3 className="text-lg font-bold text-primary mt-6 mb-3 flex items-center gap-2 border-b border-primary/10 pb-2" {...props} />,
+                                        ul: ({ ...props }) => <ul className="space-y-3 list-none pl-0 my-2" {...props} />,
+                                        li: ({ ...props }) => (
                                             <li className="bg-white/80 dark:bg-slate-800/80 p-3 rounded-tr-xl rounded-bl-xl rounded-br-xl rounded-tl-sm border border-border/50 shadow-sm relative ml-2 text-sm leading-relaxed flex gap-2" {...props}>
                                                 <span className="text-primary mt-1">•</span>
                                                 <span>{props.children}</span>
                                             </li>
                                         ),
-                                        // Remove paragraph margins inside lists
-                                        p: ({ node, ...props }) => (
-                                            <p className="mb-2 last:mb-0" {...props} />
-                                        ),
-                                        strong: ({ node, ...props }) => (
-                                            <strong className="font-bold text-primary" {...props} />
-                                        )
+                                        p: ({ ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                                        strong: ({ ...props }) => <strong className="font-bold text-primary" {...props} />
                                     }}
                                 >
                                     {data.detailed_analysis}
@@ -477,7 +425,6 @@ export function Analysis() {
                             </CardContent>
                         </Card>
 
-                        {/* Actionable Tips */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {data.tips.map((tip, i) => (
                                 <motion.div
@@ -493,8 +440,8 @@ export function Analysis() {
                                     <div className="text-sm font-medium leading-tight">
                                         <ReactMarkdown
                                             components={{
-                                                p: ({ node, ...props }) => <span {...props} />,
-                                                strong: ({ node, ...props }) => <span className="font-bold text-primary" {...props} />
+                                                p: ({ ...props }) => <span {...props} />,
+                                                strong: ({ ...props }) => <span className="font-bold text-primary" {...props} />
                                             }}
                                         >
                                             {tip}
@@ -508,7 +455,6 @@ export function Analysis() {
                             <p className="text-muted-foreground mb-4 font-medium italic">"{data.follow_up_prompt}"</p>
                             <Button variant="outline" onClick={() => setData(null)}>Run New Analysis</Button>
                         </div>
-
                     </motion.div>
                 )}
             </div>

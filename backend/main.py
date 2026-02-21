@@ -32,9 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Services
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-# Using 1.5-flash for better stability and free tier limits
+# Initialize Gemini Model
 gemini_model = genai.GenerativeModel('gemini-2.5-flash')
 chat_sessions = {}
 
@@ -237,34 +235,20 @@ You have access to tools. If you need to search for a medicine, create an order,
             }
         ]
 
-        # Use 1.5 flash as it has a much higher free tier quota (1500 reqs/day vs 20 reqs/day)
+        # Using gemini-1.5-flash as standardized
         agent_model = genai.GenerativeModel('gemini-2.5-flash', tools=tools)
         chat = agent_model.start_chat()
         
-        # Initial message with retry logic
-        max_retries_initial = 3
-        retry_delay_initial = 2
-        response = None
-        for attempt in range(max_retries_initial):
-            try:
-                print(f"🤖 Pharmacy Agent Attempt {attempt + 1}/{max_retries_initial}")
-                response = chat.send_message(f"{system_prompt}\n\nUSER MESSAGE: {request.message}")
-                break
-            except Exception as e:
-                error_msg = str(e)
-                if "429" in error_msg or "quota" in error_msg.lower() or "RESOURCE_EXHAUSTED" in error_msg:
-                    if attempt < max_retries_initial - 1:
-                        wait_time = retry_delay_initial * (attempt + 1)
-                        print(f"⏳ Rate limited on initial message. Waiting {wait_time}s...")
-                        import asyncio
-                        await asyncio.sleep(wait_time)
-                    else:
-                        raise e
-                else:
-                    raise e
+        # Initial message
+        try:
+            print("🤖 Pharmacy Agent (Using gemini-2.5-flash)")
+            response = chat.send_message(f"{system_prompt}\n\nUSER MESSAGE: {request.message}")
+        except Exception as e:
+            print(f"❌ Gemini Error: {e}")
+            raise e
         
         if not response:
-             raise Exception("Failed to get initial response from Gemini after retries")
+             raise Exception("Failed to get initial response from Gemini")
 
         # Robust Tool Loop
         max_iterations = 5
@@ -304,38 +288,21 @@ You have access to tools. If you need to search for a medicine, create an order,
                 print(f"❌ Tool Error ({tool_name}): {tool_err}")
                 tool_result = {"error": str(tool_err)}
 
-            # Send tool response back to Gemini with retry logic
-            max_retries = 3
-            retry_delay = 2
-            tool_response_success = False
-            for attempt in range(max_retries):
-                try:
-                    response = chat.send_message(
-                        genai.protos.Content(
-                            parts=[genai.protos.Part(
-                                function_response=genai.protos.FunctionResponse(
-                                    name=tool_name,
-                                    response={'result': tool_result}
-                                )
-                            )]
-                        )
+            # Send tool response
+            try:
+                response = chat.send_message(
+                    genai.protos.Content(
+                        parts=[genai.protos.Part(
+                            function_response=genai.protos.FunctionResponse(
+                                name=tool_name,
+                                response={'result': tool_result}
+                            )
+                        )]
                     )
-                    tool_response_success = True
-                    break
-                except Exception as e:
-                    error_msg = str(e)
-                    if "429" in error_msg or "quota" in error_msg.lower() or "RESOURCE_EXHAUSTED" in error_msg:
-                        if attempt < max_retries - 1:
-                            wait_time = retry_delay * (attempt + 1)
-                            print(f"⏳ Rate limited on tool response. Waiting {wait_time}s...")
-                            import asyncio
-                            await asyncio.sleep(wait_time)
-                        else:
-                            raise e
-                    else:
-                        raise e
-            if not tool_response_success:
-                raise Exception("Failed to send tool response due to rate limits after retries.")
+                )
+            except Exception as e:
+                print(f"❌ Tool Loop Error: {e}")
+                raise e
             
             iteration += 1
 
@@ -543,55 +510,28 @@ Language Guidelines:
 """
 
         
-        # Generate AI response with retry logic
-        max_retries = 3
-        retry_delay = 2  # seconds
-        ai_text = None
-        
-        for attempt in range(max_retries):
-            try:
-                print(f"🤖 Gemini API attempt {attempt + 1}/{max_retries}")
-                
-                response = gemini_model.generate_content(
-                    system_prompt + "\n\nPatient Message: " + request.message,
-                    generation_config=genai.GenerationConfig(
-                        temperature=0.7,
-                        max_output_tokens=2048,  # Increased to allow complete responses
-                    )
+        # Using gemini-1.5-flash as standardized
+        try:
+            print("🤖 Health Assistant (Using gemini-2.5-flash)")
+            response = gemini_model.generate_content(
+                system_prompt + "\n\nPatient Message: " + request.message,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=2048,
                 )
-                
-                # Validate response
-                if hasattr(response, 'text') and response.text:
-                    ai_text = response.text
-                    print(f"✅ Got response: {len(ai_text)} characters")
-                    break
-                elif hasattr(response, 'candidates') and len(response.candidates) > 0:
-                    ai_text = response.candidates[0].content.parts[0].text
-                    print(f"✅ Got response from candidates: {len(ai_text)} characters")
-                    break
-                else:
-                    print("⚠️ No valid response structure")
-                    if attempt < max_retries - 1:
-                        time.sleep(retry_delay)
-                        retry_delay *= 2
-                    
-        # ... (inside loop)
-            except Exception as gemini_error:
-                error_msg = str(gemini_error)
-                last_error_msg = error_msg # Capture for fallback
-                print(f"⚠️ Gemini API Error (attempt {attempt + 1}): {error_msg}")
-                
-                # Check if it's a rate limit error
-                if "429" in error_msg or "quota" in error_msg.lower() or "RESOURCE_EXHAUSTED" in error_msg:
-                    if attempt < max_retries - 1:
-                        wait_time = retry_delay * (attempt + 1)
-                        print(f"⏳ Rate limited. Waiting {wait_time} seconds...")
-                        time.sleep(wait_time)
-                    else:
-                        print("❌ Rate limit exceeded after retries")
-                else:
-                    # For other errors, break immediately
-                    break
+            )
+        except Exception as e:
+            print(f"❌ Gemini Error: {e}")
+            raise e
+        
+        # Process response
+        if hasattr(response, 'text') and response.text:
+            ai_text = response.text
+        elif hasattr(response, 'candidates') and len(response.candidates) > 0:
+            ai_text = response.candidates[0].content.parts[0].text
+        
+        if ai_text:
+            print(f"✅ Got response: {len(ai_text)} characters")
         
         # If no response after retries, use fallback
         if not ai_text:
