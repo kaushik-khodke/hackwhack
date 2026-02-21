@@ -21,9 +21,12 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 app = FastAPI(title="Healthcare AI Assistant", version="2.0.0")
 
 # CORS Configuration
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
+_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

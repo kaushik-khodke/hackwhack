@@ -7,6 +7,7 @@ import { UploadWizard } from "@/components/features/UploadWizard";
 
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { API_BASE_URL } from "@/lib/api";
 
 import { motion } from "framer-motion";
 import {
@@ -139,7 +140,7 @@ export default function Records() {
     setProcessingId(record.id);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/process_document", {
+      const response = await fetch(`${API_BASE_URL}/process_document`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
 

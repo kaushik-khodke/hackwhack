@@ -21,6 +21,7 @@ import {
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useAuth } from '@/hooks/useAuth'
+import { API_BASE_URL } from '@/lib/api'
 
 // Web Speech API types
 declare global {
@@ -289,7 +290,7 @@ export function Chat() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

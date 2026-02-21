@@ -5,6 +5,7 @@ import { AlertCircle, ArrowRight, Pill, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
+import { API_BASE_URL } from '@/lib/api'
 
 interface RefillAlert {
     medicine_id: string
@@ -27,7 +28,7 @@ export function PharmacyRefillAlerts() {
 
     const fetchAlerts = async () => {
         try {
-            const response = await fetch(`http://localhost:8000/pharmacy/refill-alerts/${user?.id}`)
+            const response = await fetch(`${API_BASE_URL}/pharmacy/refill-alerts/${user?.id}`)
             const data = await response.json()
             if (data.success) {
                 setAlerts(data.alerts)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { API_BASE_URL } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -147,12 +148,12 @@ export function Analysis() {
         try {
             // Run analysis and trends fetch in parallel
             const [analysisRes, trendsRes] = await Promise.all([
-                fetch('http://127.0.0.1:8000/analyze_health', {
+                fetch(`${API_BASE_URL}/analyze_health`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: patientId })
                 }),
-                fetch('http://127.0.0.1:8000/health_trends', {
+                fetch(`${API_BASE_URL}/health_trends`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: patientId })

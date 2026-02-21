@@ -15,6 +15,7 @@ import {
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useAuth } from '@/hooks/useAuth'
+import { API_BASE_URL } from '@/lib/api'
 
 interface Message {
     id: string
@@ -193,7 +194,7 @@ export function PharmacyChat() {
         setIsLoading(true)
 
         try {
-            const response = await fetch('http://localhost:8000/pharmacy/chat', {
+            const response = await fetch(`${API_BASE_URL}/pharmacy/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -327,8 +328,8 @@ export function PharmacyChat() {
                             )}
                             <div
                                 className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-6 py-4 shadow-sm relative group ${m.isUser
-                                        ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-br-sm'
-                                        : 'bg-white border border-slate-100/80 rounded-bl-sm'
+                                    ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-br-sm'
+                                    : 'bg-white border border-slate-100/80 rounded-bl-sm'
                                     }`}
                             >
                                 <div className={`prose prose-sm max-w-none ${m.isUser ? 'prose-invert' : ''}`}>
@@ -350,8 +351,8 @@ export function PharmacyChat() {
                             variant="ghost"
                             onClick={startListening}
                             className={`rounded-2xl w-14 h-14 p-0 shadow-sm transition-all ${isListening
-                                    ? 'bg-red-500 text-white shadow-red-200'
-                                    : 'bg-white border border-slate-100 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100'
+                                ? 'bg-red-500 text-white shadow-red-200'
+                                : 'bg-white border border-slate-100 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100'
                                 }`}
                         >
                             {isListening ? <StopCircle className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
